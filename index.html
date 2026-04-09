@@ -117,6 +117,7 @@ select,input[type=text],input[type=number]{width:100%;background:var(--bg);color
     <div><label>Font Size</label><input type="number" id="fontSize" value="48"></div>
     <div><label>Align</label><select id="textAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></div>
     <div><label>V-Position</label><input type="number" id="vPos" value="82" min="0" max="100"></div>
+    <div><label>Max Words</label><input type="number" id="maxWords" value="10" min="1" max="50"></div>
   </div>
   <div style="margin-top:14px">
     <label>Background Style</label>
@@ -228,7 +229,7 @@ document.querySelectorAll('#presetChips .chip').forEach(c=>{
   document.querySelector('#presetChips .chip:last-child').classList.add('active');
   drawFrame(0);
 }));
-['fontSize','vPos','textAlign','bgColorText','textColorText','hlColorText','textOpacity','hlOpacity'].forEach(id=>{
+['fontSize','vPos','maxWords','textAlign','bgColorText','textColorText','hlColorText','textOpacity','hlOpacity'].forEach(id=>{
   const el=$(id); if(el) el.addEventListener('input',()=>drawFrame(0));
 });
 $('transparentBg').addEventListener('change',e=>{
@@ -360,6 +361,7 @@ function S(){return{
   hlA:parseInt($('hlOpacity').value)/100,
   align:$('textAlign').value,
   vpos:parseInt($('vPos').value)/100,
+  mwl:parseInt($('maxWords').value)||10,
   transparent: $('transparentBg').checked,
 };}
 function activeSub(t){for(const s of subs)if(t>=s.start&&t<=s.end)return s;return null;}
@@ -390,7 +392,7 @@ function drawFrame(time,canvas,settings){
     ctx.textAlign=s.align; ctx.textBaseline='middle';
     const x = s.align==='left' ? s.w*0.06 : (s.align==='right' ? s.w*0.94 : s.w/2);
     const y = s.h * s.vpos, mw = s.w*0.88;
-    const lines=wrap(ctx,sub.text,mw),lh=s.fs*1.35,th=lines.length*lh,sy2=y-th/2+lh/2;
+    const lines=wrap(ctx,sub.text,mw,s.mwl),lh=s.fs*1.35,th=lines.length*lh,sy2=y-th/2+lh/2;
     let bw=0;lines.forEach(l=>{bw=Math.max(bw,ctx.measureText(l).width);});
     const p=20, bx = s.align==='left' ? x-p : (s.align==='right' ? x-bw-p : x-bw/2-p);
     const by=sy2-lh/2-p/2,bfw=bw+p*2,bfh=th+p;
@@ -410,7 +412,19 @@ function drawFrame(time,canvas,settings){
     ctx.fillStyle='rgba(255,255,255,0.12)';ctx.fillRect(0,s.h-3,s.w,3);
     ctx.fillStyle=hexRgba(s.hl,0.8);ctx.fillRect(0,s.h-3,s.w*pct,3);ctx.restore();}
 }
-function wrap(ctx,t,mw){const w=t.split(/\s+/),ls=[];let c='';w.forEach(x=>{const tt=c?c+' '+x:x;if(ctx.measureText(tt).width>mw&&c){ls.push(c);c=x;}else c=tt;});if(c)ls.push(c);return ls.length?ls:[''];}
+function wrap(ctx,t,mw,mwl){
+  const w=t.split(/\s+/),ls=[];let c='',wc=0;
+  w.forEach(x=>{
+    const tt=c?c+' '+x:x;
+    const curW=ctx.measureText(tt).width;
+    if((curW>mw || (mwl && wc>=mwl)) && c){
+      ls.push(c);c=x;wc=1;
+    }else{
+      c=tt;wc++;
+    }
+  });
+  if(c)ls.push(c);return ls.length?ls:[''];
+}
 function rrP(c,x,y,w,h,r){c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.quadraticCurveTo(x+w,y,x+w,y+r);c.lineTo(x+w,y+h-r);c.quadraticCurveTo(x+w,y+h,x+w-r,y+h);c.lineTo(x+r,y+h);c.quadraticCurveTo(x,y+h,x,y+h-r);c.lineTo(x,y+r);c.quadraticCurveTo(x,y,x+r,y);c.closePath();}
 function rrF(c,x,y,w,h,r){c.beginPath();rrP(c,x,y,w,h,r);c.fill();}
 
