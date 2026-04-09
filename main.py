@@ -360,7 +360,14 @@ document.querySelectorAll('#presetChips .chip').forEach(c=>{
 ['vidW','vidH'].forEach(id=>$(id).addEventListener('input',()=>{
   document.querySelectorAll('#presetChips .chip').forEach(c=>c.classList.remove('active'));
   document.querySelector('#presetChips .chip:last-child').classList.add('active');
+  drawFrame(0);
 }));
+['fontSize','bgColorText','textColorText','hlColorText','textOpacity','hlOpacity'].forEach(id=>{
+  const el=$(id); if(el) el.addEventListener('input',()=>drawFrame(0));
+});
+['bgColor','textColor','hlColor'].forEach(id=>{
+  const el=$(id); if(el) el.addEventListener('input',()=>drawFrame(0));
+});
 
 // ══ MIME ═════════════════════════════════════════════════════════════════════
 function pickMime(mp4){
