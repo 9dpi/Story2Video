@@ -107,7 +107,7 @@ async def generate_tts(req: TTSRequest):
         # 3. Retry loop
         for attempt in range(3):
             try:
-                comm = edge_tts.Communicate(**kw)
+                comm = edge_tts.Communicate(**kw, boundary="WordBoundary")
                 ad = bytearray(); words = []
                 
                 async for c in comm.stream():
