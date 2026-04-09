@@ -97,7 +97,9 @@ async def generate_tts(req: TTSRequest):
         if len(req.text.strip()) == 0:
             raise HTTPException(400, "Văn bản không được để trống.")
 
-        kw = dict(text=req.text, voice=req.voice, rate=rate, pitch=pitch)
+        kw = dict(text=req.text, voice=req.voice)
+        if req.rate != "+0%": kw["rate"] = req.rate
+        if req.pitch != "+0Hz": kw["pitch"] = req.pitch
         if PROXY: kw["proxy"] = PROXY
         
         ad = bytearray(); sm = None
