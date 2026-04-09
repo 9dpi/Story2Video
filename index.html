@@ -335,7 +335,12 @@ async function genTTS(){
   btn.disabled=true;st.textContent='Đang tạo MP3 + Subtitles…';st.className='status';dl.innerHTML='';sp.style.display='none';
   try{
     const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text,voice:$('voiceSelect').value,rate:$('rateSelect').value})});
+      body:JSON.stringify({
+        text,
+        voice:$('voiceSelect').value,
+        rate:$('rateSelect').value,
+        max_words:parseInt($('maxWords').value)||10
+      })});
     if(!r.ok)throw new Error(`HTTP ${r.status}: ${await r.text()}`);
     const d=await r.json();subs=d.subtitles;
     sp.textContent=await(await fetch(d.srt_url)).text();sp.style.display='block';

@@ -32,7 +32,7 @@ app = FastAPI(title="Story2Video")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 class TTSRequest(BaseModel):
-    text: str; voice: str = "vi-VN-HoaiMyNeural"; rate: str = "+0%"; pitch: str = "+0Hz"
+    text: str; voice: str = "vi-VN-HoaiMyNeural"; rate: str = "+0%"; pitch: str = "+0Hz"; max_words: int = 10
 
 def srt_time_to_sec(ts):
     ts = ts.strip().replace(",", ".")
@@ -102,20 +102,24 @@ async def generate_tts(req: TTSRequest):
         if req.pitch != "+0Hz": kw["pitch"] = req.pitch
         if PROXY: kw["proxy"] = PROXY
         
-        ad = bytearray(); sm = None
+        ad = bytearray(); words = []
         
         # 3. Retry loop
         for attempt in range(3):
             try:
                 comm = edge_tts.Communicate(**kw)
-                sm = edge_tts.SubMaker()
-                ad = bytearray()
+                ad = bytearray(); words = []
                 
                 async for c in comm.stream():
                     if c["type"] == "audio":
                         ad.extend(c["data"])
-                    elif c["type"] in ("WordBoundary", "SentenceBoundary"):
-                        sm.feed(c)
+                    elif c["type"] == "WordBoundary":
+                        # c["offset"] is in 100ns units. Convert to seconds.
+                        words.append({
+                            "start": c["offset"] / 10_000_000,
+                            "dur": c["duration"] / 10_000_000,
+                            "text": c["text"]
+                        })
                 
                 if len(ad) > 0:
                     break # Success!
@@ -126,18 +130,37 @@ async def generate_tts(req: TTSRequest):
                 print(f"[WARN] Trial {attempt+1} failed: {e}")
                 if attempt == 2:
                     raise e
-                await asyncio.sleep(2) # Wait a bit longer before retry
+                await asyncio.sleep(2)
                 
         # 4. Save results
         if not ad:
             raise Exception("Không nhận được dữ liệu âm thanh sau 3 lần thử.")
 
         (jd/"audio.mp3").write_bytes(ad)
-        raw_srt = sm.get_srt()
+
+        # 5. Process Subtitles based on max_words
+        cues = []
+        n = req.max_words if req.max_words > 0 else 10
+        for i in range(0, len(words), n):
+            chunk = words[i : i + n]
+            if not chunk: continue
+            cues.append({
+                "start": chunk[0]["start"],
+                "end": chunk[-1]["start"] + chunk[-1]["dur"],
+                "text": " ".join([w["text"] for w in chunk])
+            })
+
+        def fmt_time(seconds):
+            m, s = divmod(seconds, 60); h, m = divmod(m, 60); ms = int((s - int(s)) * 1000)
+            return f"{int(h):02d}:{int(m):02d}:{int(s):02d},{ms:03d}"
+
+        raw_srt = ""
+        for idx, cue in enumerate(cues):
+            raw_srt += f"{idx+1}\n{fmt_time(cue['start'])} --> {fmt_time(cue['end'])}\n{cue['text']}\n\n"
+
         (jd/"subtitles.srt").write_text(raw_srt, encoding="utf-8")
         (jd/"subtitles.vtt").write_text(srt_to_vtt(raw_srt), encoding="utf-8")
-        js_data = parse_srt(raw_srt)
-        (jd/"subtitles.json").write_text(json.dumps(js_data, ensure_ascii=False, indent=2), encoding="utf-8")
+        (jd/"subtitles.json").write_text(json.dumps(cues, ensure_ascii=False, indent=2), encoding="utf-8")
         
         return {
             "job_id": jid,
@@ -145,7 +168,7 @@ async def generate_tts(req: TTSRequest):
             "srt_url": f"/output/{jid}/subtitles.srt",
             "vtt_url": f"/output/{jid}/subtitles.vtt",
             "json_url": f"/output/{jid}/subtitles.json",
-            "subtitles": js_data
+            "subtitles": cues
         }
     except Exception as exc:
         print(f"[FATAL] generate_tts: {exc}")
@@ -510,7 +533,12 @@ async function genTTS(){
   btn.disabled=true;st.textContent='Đang tạo MP3 + Subtitles…';st.className='status';dl.innerHTML='';sp.style.display='none';
   try{
     const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text,voice:$('voiceSelect').value,rate:$('rateSelect').value})});
+      body:JSON.stringify({
+        text,
+        voice:$('voiceSelect').value,
+        rate:$('rateSelect').value,
+        max_words:parseInt($('maxWords').value)||10
+      })});
     if(!r.ok)throw new Error(`HTTP ${r.status}: ${await r.text()}`);
     const d=await r.json();subs=d.subtitles;
     sp.textContent=await(await fetch(d.srt_url)).text();sp.style.display='block';
