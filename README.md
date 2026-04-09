@@ -33,7 +33,21 @@ Dự án yêu cầu cài đặt [Python](https://www.python.org/).
 4. **Trải nghiệm:**
    Mở trình duyệt và truy cập: `http://localhost:8001`
 
-## 🛠️ Công nghệ sử dụng
+## 🐳 Triển khai với Docker
+
+Bạn có thể dễ dàng triển khai dự án bằng Docker:
+
+1. **Sử dụng Docker Compose:**
+   ```bash
+   docker-compose up -d --build
+   ```
+
+2. **Cấu hình trên Coolify:**
+   - Chọn nguồn từ GitHub repository.
+   - Coolify sẽ tự động nhận diện `Dockerfile` hoặc bạn có thể cấu hình sử dụng `docker-compose.yml`.
+   - Đảm bảo port `8001` được expose.
+
+## ️ Công nghệ sử dụng
 
 - **Backend:** FastAPI, Edge TTS.
 - **Frontend:** HTML5 Canvas, Web Audio API, MediaRecorder API (xử lý video trực tiếp trên trình duyệt).
