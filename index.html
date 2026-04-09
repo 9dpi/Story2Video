@@ -115,6 +115,8 @@ select,input[type=text],input[type=number]{width:100%;background:var(--bg);color
     <div><label>Height</label><input type="number" id="vidH" value="720"></div>
     <div><label>FPS</label><select id="vidFPS"><option value="24">24</option><option value="30" selected>30</option><option value="60">60</option></select></div>
     <div><label>Font Size</label><input type="number" id="fontSize" value="48"></div>
+    <div><label>Align</label><select id="textAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></div>
+    <div><label>V-Position</label><input type="number" id="vPos" value="82" min="0" max="100"></div>
   </div>
 
   <div style="margin-top:14px">
@@ -219,7 +221,7 @@ document.querySelectorAll('#presetChips .chip').forEach(c=>{
   document.querySelector('#presetChips .chip:last-child').classList.add('active');
   drawFrame(0);
 }));
-['fontSize','bgColorText','textColorText','hlColorText','textOpacity','hlOpacity'].forEach(id=>{
+['fontSize','vPos','textAlign','bgColorText','textColorText','hlColorText','textOpacity','hlOpacity'].forEach(id=>{
   const el=$(id); if(el) el.addEventListener('input',()=>drawFrame(0));
 });
 ['bgColor','textColor','hlColor'].forEach(id=>{
@@ -334,6 +336,8 @@ function S(){return{
   bg:$('bgColor').value, fg:$('textColor').value, hl:$('hlColor').value,
   fgA:parseInt($('textOpacity').value)/100,
   hlA:parseInt($('hlOpacity').value)/100,
+  align:$('textAlign').value,
+  vpos:parseInt($('vPos').value)/100,
 };}
 function activeSub(t){for(const s of subs)if(t>=s.start&&t<=s.end)return s;return null;}
 function activeBg(t){if(!bgImages.length)return null;let cum=0;
@@ -355,11 +359,13 @@ function drawFrame(time,canvas,settings){
   const sub=activeSub(time);
   if(sub){
     ctx.save();ctx.font=`bold ${s.fs}px 'Segoe UI',system-ui,sans-serif`;
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    const x=s.w/2,y=s.h*.82,mw=s.w*.88;
+    ctx.textAlign=s.align; ctx.textBaseline='middle';
+    const x = s.align==='left' ? s.w*0.06 : (s.align==='right' ? s.w*0.94 : s.w/2);
+    const y = s.h * s.vpos, mw = s.w*0.88;
     const lines=wrap(ctx,sub.text,mw),lh=s.fs*1.35,th=lines.length*lh,sy2=y-th/2+lh/2;
     let bw=0;lines.forEach(l=>{bw=Math.max(bw,ctx.measureText(l).width);});
-    const p=20,bx=x-bw/2-p,by=sy2-lh/2-p/2,bfw=bw+p*2,bfh=th+p;
+    const p=20, bx = s.align==='left' ? x-p : (s.align==='right' ? x-bw-p : x-bw/2-p);
+    const by=sy2-lh/2-p/2,bfw=bw+p*2,bfh=th+p;
     // Box bg
     ctx.fillStyle='rgba(0,0,0,0.6)';rrF(ctx,bx,by,bfw,bfh,12);
     // Highlight sweep
