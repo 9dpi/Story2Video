@@ -272,6 +272,7 @@ select,input[type=text],input[type=number]{width:100%;background:var(--bg);color
       <div class="color-row">
         <input type="color" id="bgColor" value="#1a1a2e" oninput="$('bgColorText').value=this.value">
         <input type="text" id="bgColorText" value="#1a1a2e" oninput="$('bgColor').value=this.value">
+        <button class="chip" id="btnGreen" style="height:36px;border-color:#00ff00;color:#00ff00">Green Screen</button>
       </div>
     </div>
   </div>
@@ -377,6 +378,14 @@ $('transparentBg').addEventListener('change',e=>{
   $('bgSettingsGroup').style.opacity=e.target.checked?'0.3':'1';
   $('bgSettingsGroup').style.pointerEvents=e.target.checked?'none':'auto';
   if(e.target.checked){ $('expFmt').value='webm'; updFmt(); }
+  drawFrame(0);
+});
+$('btnGreen').addEventListener('click',()=>{
+  $('transparentBg').checked=false;
+  $('bgSettingsGroup').style.opacity='1';
+  $('bgSettingsGroup').style.pointerEvents='auto';
+  $('bgColor').value='#00ff00';
+  $('bgColorText').value='#00ff00';
   drawFrame(0);
 });
 ['bgColor','textColor','hlColor'].forEach(id=>{
