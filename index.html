@@ -192,7 +192,6 @@ select,input[type=text],input[type=number]{width:100%;background:var(--bg);color
 </div>
 
 <script>
-const API_BASE = window.location.hostname.includes('github.io') ? 'http://127.0.0.1:8001' : '';
 const $=id=>document.getElementById(id);
 const SEG_COLORS=['#6c5ce7','#00cec9','#e17055','#fdcb6e','#a29bfe','#55efc4','#fab1a0','#74b9ff','#ff7675','#81ecec'];
 
@@ -230,12 +229,12 @@ function updFmt(){const m=pickMime($('expFmt').value==='mp4');$('fmtNote').textC
 $('expFmt').addEventListener('change',updFmt);setTimeout(updFmt,100);
 
 // ══ VOICES ══════════════════════════════════════════════════════════════════
-(async()=>{try{const r=await fetch(API_BASE + '/api/featured-voices'),f=await r.json(),t=$('voiceTabs');
+(async()=>{try{const r=await fetch('/api/featured-voices'),f=await r.json(),t=$('voiceTabs');
 f.forEach(v=>{const b=document.createElement('button');b.className='chip'+(v.name==='vi-VN-HoaiMyNeural'?' active':'');
 b.textContent=v.label;b.onclick=()=>{t.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');
 const s=$('voiceSelect');s.value=v.name;if(s.value!==v.name){const o=document.createElement('option');o.value=v.name;o.textContent=v.name;s.prepend(o);s.value=v.name;}};
 t.appendChild(b);});}catch(e){}})();
-(async()=>{try{const r=await fetch(API_BASE + '/api/voices'),v=await r.json(),s=$('voiceSelect');s.innerHTML='';
+(async()=>{try{const r=await fetch('/api/voices'),v=await r.json(),s=$('voiceSelect');s.innerHTML='';
 const g={};v.forEach(x=>{if(!g[x.locale])g[x.locale]=[];g[x.locale].push(x);});
 const pr=['vi-VN','en-US','en-GB','ja-JP','ko-KR','zh-CN','fr-FR','de-DE','es-ES','pt-BR','th-TH','hi-IN'];
 Object.keys(g).sort((a,b)=>{const ai=pr.indexOf(a),bi=pr.indexOf(b);if(ai>-1&&bi>-1)return ai-bi;if(ai>-1)return-1;if(bi>-1)return 1;return a.localeCompare(b);})
@@ -303,19 +302,19 @@ async function genTTS(){
   if(!text){st.textContent='Vui lòng nhập văn bản!';st.className='status error';return;}
   btn.disabled=true;st.textContent='Đang tạo MP3 + Subtitles…';st.className='status';dl.innerHTML='';sp.style.display='none';
   try{
-    const r=await fetch(API_BASE + '/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},
+    const r=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({text,voice:$('voiceSelect').value,rate:$('rateSelect').value})});
     if(!r.ok)throw new Error(`HTTP ${r.status}: ${await r.text()}`);
     const d=await r.json();subs=d.subtitles;
-    sp.textContent=await(await fetch(API_BASE + d.srt_url)).text();sp.style.display='block';
+    sp.textContent=await(await fetch(d.srt_url)).text();sp.style.display='block';
     audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-    audioBuf=await audioCtx.decodeAudioData(await(await fetch(API_BASE + d.mp3_url)).arrayBuffer());
+    audioBuf=await audioCtx.decodeAudioData(await(await fetch(d.mp3_url)).arrayBuffer());
     totalDur=audioBuf.duration;if(bgImages.length)redistEqual();renderImgUI();
     st.textContent=`Done! ${subs.length} cues, ${totalDur.toFixed(1)}s.`;
-    dl.innerHTML=`<a class="btn btn-d" href="${API_BASE}${d.mp3_url}" download="audio.mp3">MP3</a>
-      <a class="btn btn-d" href="${API_BASE}${d.srt_url}" download="subtitles.srt">SRT</a>
-      <a class="btn btn-d" href="${API_BASE}${d.vtt_url}" download="subtitles.vtt">VTT</a>
-      <a class="btn btn-d" href="${API_BASE}${d.json_url}" download="subtitles.json">JSON</a>`;
+    dl.innerHTML=`<a class="btn btn-d" href="${d.mp3_url}" download="audio.mp3">MP3</a>
+      <a class="btn btn-d" href="${d.srt_url}" download="subtitles.srt">SRT</a>
+      <a class="btn btn-d" href="${d.vtt_url}" download="subtitles.vtt">VTT</a>
+      <a class="btn btn-d" href="${d.json_url}" download="subtitles.json">JSON</a>`;
     $('btnPlay').disabled=false;$('btnExp').disabled=false;drawFrame(0);
   }catch(e){st.textContent='Error: '+e.message;st.className='status error';console.error(e);}
   finally{btn.disabled=false;}
