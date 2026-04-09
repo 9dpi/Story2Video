@@ -126,7 +126,7 @@ FRONTEND_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Story2Video</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231a1a2e'/><path d='M18 20L28 32L18 44' stroke='%236c5ce7' stroke-width='5' stroke-linecap='round' stroke-linejoin='round' fill='none'/><rect x='33' y='20' width='14' height='4' rx='2' fill='%2300cec9'/><rect x='33' y='30' width='10' height='4' rx='2' fill='%2300cec9' opacity='.7'/><rect x='33' y='40' width='12' height='4' rx='2' fill='%2300cec9' opacity='.5'/></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231a1a2e'/><path d='M14 20C14 18.8954 14.8954 18 16 18H48C49.1046 18 50 18.8954 50 20V44C50 45.1046 49.1046 46 48 46H16C14.8954 46 14 45.1046 14 44V20Z' fill='%236c5ce7'/><path d='M28 26V38L38 32L28 26Z' fill='white'/><rect x='18' y='22' width='4' height='4' fill='white' opacity='0.4'/><rect x='42' y='22' width='4' height='4' fill='white' opacity='0.4'/><rect x='18' y='38' width='4' height='4' fill='white' opacity='0.4'/><rect x='42' y='38' width='4' height='4' fill='white' opacity='0.4'/></svg>">
 <style>
 :root{--bg:#0f0f13;--sf:#1a1a24;--bd:#2a2a3a;--tx:#e4e4ef;--dm:#888899;--ac:#6c5ce7;--a2:#00cec9;--dn:#ff6b6b;--rd:10px}
 *{margin:0;padding:0;box-sizing:border-box}
