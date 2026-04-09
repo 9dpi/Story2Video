@@ -107,15 +107,15 @@ async def generate_tts(req: TTSRequest):
         # 3. Retry loop
         for attempt in range(3):
             try:
-                comm = edge_tts.Communicate(**kw, boundary="WordBoundary")
-                ad = bytearray(); words = []
+                # Use default boundary (SentenceBoundary) as it's more stable for VN voices
+                comm = edge_tts.Communicate(**kw)
+                ad = bytearray(); sentence_cues = []
                 
                 async for c in comm.stream():
                     if c["type"] == "audio":
                         ad.extend(c["data"])
-                    elif c["type"] == "WordBoundary":
-                        # c["offset"] is in 100ns units. Convert to seconds.
-                        words.append({
+                    elif c["type"] == "SentenceBoundary":
+                        sentence_cues.append({
                             "start": c["offset"] / 10_000_000,
                             "dur": c["duration"] / 10_000_000,
                             "text": c["text"]
@@ -138,17 +138,26 @@ async def generate_tts(req: TTSRequest):
 
         (jd/"audio.mp3").write_bytes(ad)
 
-        # 5. Process Subtitles based on max_words
+        # 5. Process Subtitles: Split Sentences into N-word blocks
         cues = []
         n = req.max_words if req.max_words > 0 else 10
-        for i in range(0, len(words), n):
-            chunk = words[i : i + n]
-            if not chunk: continue
-            cues.append({
-                "start": chunk[0]["start"],
-                "end": chunk[-1]["start"] + chunk[-1]["dur"],
-                "text": " ".join([w["text"] for w in chunk])
-            })
+        
+        for sminfo in sentence_cues:
+            words = sminfo["text"].split()
+            if not words: continue
+            
+            # Split words into groups of n
+            for i in range(0, len(words), n):
+                chunk = words[i : i + n]
+                # Calculate timing ratio
+                ratio_start = i / len(words)
+                ratio_end = (i + len(chunk)) / len(words)
+                
+                cues.append({
+                    "start": sminfo["start"] + (sminfo["dur"] * ratio_start),
+                    "end": sminfo["start"] + (sminfo["dur"] * ratio_end),
+                    "text": " ".join(chunk)
+                })
 
         def fmt_time(seconds):
             m, s = divmod(seconds, 60); h, m = divmod(m, 60); ms = int((s - int(s)) * 1000)
