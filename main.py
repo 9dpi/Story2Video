@@ -261,12 +261,18 @@ select,input[type=text],input[type=number]{width:100%;background:var(--bg);color
     <div><label>Align</label><select id="textAlign"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></div>
     <div><label>V-Position</label><input type="number" id="vPos" value="82" min="0" max="100"></div>
   </div>
-
   <div style="margin-top:14px">
-    <label>Background Color (fallback)</label>
-    <div class="color-row">
-      <input type="color" id="bgColor" value="#1a1a2e" oninput="$('bgColorText').value=this.value">
-      <input type="text" id="bgColorText" value="#1a1a2e" oninput="$('bgColor').value=this.value">
+    <label>Background Style</label>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <input type="checkbox" id="transparentBg" style="width:18px;height:18px;cursor:pointer">
+      <span style="font-size:.88rem;color:var(--tx)">Transparent Background (WebM Only)</span>
+    </div>
+    <div id="bgSettingsGroup">
+      <label>Background Color (fallback)</label>
+      <div class="color-row">
+        <input type="color" id="bgColor" value="#1a1a2e" oninput="$('bgColorText').value=this.value">
+        <input type="text" id="bgColorText" value="#1a1a2e" oninput="$('bgColor').value=this.value">
+      </div>
     </div>
   </div>
 
@@ -367,12 +373,19 @@ document.querySelectorAll('#presetChips .chip').forEach(c=>{
 ['fontSize','vPos','textAlign','bgColorText','textColorText','hlColorText','textOpacity','hlOpacity'].forEach(id=>{
   const el=$(id); if(el) el.addEventListener('input',()=>drawFrame(0));
 });
+$('transparentBg').addEventListener('change',e=>{
+  $('bgSettingsGroup').style.opacity=e.target.checked?'0.3':'1';
+  $('bgSettingsGroup').style.pointerEvents=e.target.checked?'none':'auto';
+  if(e.target.checked){ $('expFmt').value='webm'; updFmt(); }
+  drawFrame(0);
+});
 ['bgColor','textColor','hlColor'].forEach(id=>{
   const el=$(id); if(el) el.addEventListener('input',()=>drawFrame(0));
 });
 
 // ══ MIME ═════════════════════════════════════════════════════════════════════
 function pickMime(mp4){
+  if($('transparentBg').checked) return 'video/webm;codecs=vp9,opus';
   const a=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1.42E01E,opus','video/mp4;codecs=avc1,opus','video/mp4'];
   const b=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
   for(const m of(mp4?[...a,...b]:[...b,...a]))if(MediaRecorder.isTypeSupported(m))return m;return'video/webm';
@@ -481,6 +494,7 @@ function S(){return{
   hlA:parseInt($('hlOpacity').value)/100,
   align:$('textAlign').value,
   vpos:parseInt($('vPos').value)/100,
+  transparent: $('transparentBg').checked,
 };}
 function activeSub(t){for(const s of subs)if(t>=s.start&&t<=s.end)return s;return null;}
 function activeBg(t){if(!bgImages.length)return null;let cum=0;
@@ -490,14 +504,19 @@ function activeBg(t){if(!bgImages.length)return null;let cum=0;
 function drawFrame(time,canvas,settings){
   const c=canvas||$('cvs'),s=settings||S(),ctx=c.getContext('2d');
   if(c.width!==s.w||c.height!==s.h){c.width=s.w;c.height=s.h;}
-  // BG
-  const bg=activeBg(time);
-  if(bg){const ir=bg.width/bg.height,cr=s.w/s.h;let sw,sh,sx,sy;
-    if(ir>cr){sh=bg.height;sw=sh*cr;sx=(bg.width-sw)/2;sy=0;}
-    else{sw=bg.width;sh=sw/cr;sx=0;sy=(bg.height-sh)/2;}
-    ctx.drawImage(bg,sx,sy,sw,sh,0,0,s.w,s.h);
-    ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(0,0,s.w,s.h);
-  }else{ctx.fillStyle=s.bg;ctx.fillRect(0,0,s.w,s.h);}
+  
+  if(s.transparent){
+    ctx.clearRect(0,0,s.w,s.h);
+  } else {
+    // BG
+    const bg=activeBg(time);
+    if(bg){const ir=bg.width/bg.height,cr=s.w/s.h;let sw,sh,sx,sy;
+      if(ir>cr){sh=bg.height;sw=sh*cr;sx=(bg.width-sw)/2;sy=0;}
+      else{sw=bg.width;sh=sw/cr;sx=0;sy=(bg.height-sh)/2;}
+      ctx.drawImage(bg,sx,sy,sw,sh,0,0,s.w,s.h);
+      ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(0,0,s.w,s.h);
+    }else{ctx.fillStyle=s.bg;ctx.fillRect(0,0,s.w,s.h);}
+  }
   // Sub
   const sub=activeSub(time);
   if(sub){
