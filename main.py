@@ -88,31 +88,39 @@ FEATURED = [
 
 @app.post("/api/tts")
 async def generate_tts(req: TTSRequest):
-    jid = str(uuid.uuid4())[:8]; jd = OUTPUT_DIR/jid; jd.mkdir(parents=True, exist_ok=True)
-    kw = dict(text=req.text, voice=req.voice, rate=req.rate, pitch=req.pitch)
-    if PROXY: kw["proxy"] = PROXY
-    
-    ad = bytearray(); sm = None
-    for attempt in range(3):
-        try:
-            comm = edge_tts.Communicate(**kw); sm = edge_tts.SubMaker(); ad = bytearray()
-            async for c in comm.stream():
-                if c["type"]=="audio": ad.extend(c["data"])
-                elif c["type"] in ("WordBoundary","SentenceBoundary"): sm.feed(c)
-            if ad: break # Success
-        except Exception as e:
-            print(f"[WARN] TTS generation error (attempt {attempt+1}/3): {e}")
-            if attempt == 2: raise HTTPException(status_code=500, detail=f"Lỗi kết nối Microsoft TTS: {e}")
-            await asyncio.sleep(1.5)
-            
-    if not ad: raise HTTPException(status_code=500, detail="Máy chủ từ chối phản hồi Audio.")
+    try:
+        jid = str(uuid.uuid4())[:8]; jd = OUTPUT_DIR/jid; jd.mkdir(parents=True, exist_ok=True)
+        import xml.sax.saxutils
+        safe_text = xml.sax.saxutils.escape(req.text)
+        kw = dict(text=safe_text, voice=req.voice, rate=req.rate, pitch=req.pitch)
+        if PROXY: kw["proxy"] = PROXY
+        
+        ad = bytearray(); sm = None
+        for attempt in range(3):
+            try:
+                comm = edge_tts.Communicate(**kw); sm = edge_tts.SubMaker(); ad = bytearray()
+                async for c in comm.stream():
+                    if c["type"]=="audio": ad.extend(c["data"])
+                    elif c["type"] in ("WordBoundary","SentenceBoundary"): sm.feed(c)
+                if ad: break # Success
+            except Exception as e:
+                print(f"[WARN] TTS generation error (attempt {attempt+1}/3): {e}")
+                if attempt == 2: raise HTTPException(status_code=500, detail=f"Lỗi nối Microsoft TTS ({type(e).__name__}): {e}")
+                await asyncio.sleep(1.5)
+                
+        if not ad: raise HTTPException(status_code=500, detail="Máy chủ từ chối phản hồi Audio.")
 
-    (jd/"audio.mp3").write_bytes(ad)
-    srt = sm.get_srt(); (jd/"subtitles.srt").write_text(srt, encoding="utf-8")
-    (jd/"subtitles.vtt").write_text(srt_to_vtt(srt), encoding="utf-8")
-    js = parse_srt(srt); (jd/"subtitles.json").write_text(json.dumps(js, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"job_id":jid,"mp3_url":f"/output/{jid}/audio.mp3","srt_url":f"/output/{jid}/subtitles.srt",
-            "vtt_url":f"/output/{jid}/subtitles.vtt","json_url":f"/output/{jid}/subtitles.json","subtitles":js}
+        (jd/"audio.mp3").write_bytes(ad)
+        srt = sm.get_srt(); (jd/"subtitles.srt").write_text(srt, encoding="utf-8")
+        (jd/"subtitles.vtt").write_text(srt_to_vtt(srt), encoding="utf-8")
+        js = parse_srt(srt); (jd/"subtitles.json").write_text(json.dumps(js, ensure_ascii=False, indent=2), encoding="utf-8")
+        return {"job_id":jid,"mp3_url":f"/output/{jid}/audio.mp3","srt_url":f"/output/{jid}/subtitles.srt",
+                "vtt_url":f"/output/{jid}/subtitles.vtt","json_url":f"/output/{jid}/subtitles.json","subtitles":js}
+    except Exception as exc:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[CRITICAL ERROR]\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Lỗi máy chủ nghiêm trọng: {exc} | Trace: {tb[-200:]}")
 
 @app.get("/api/voices")
 async def list_voices():
