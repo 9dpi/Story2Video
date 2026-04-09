@@ -90,9 +90,7 @@ FEATURED = [
 async def generate_tts(req: TTSRequest):
     try:
         jid = str(uuid.uuid4())[:8]; jd = OUTPUT_DIR/jid; jd.mkdir(parents=True, exist_ok=True)
-        import xml.sax.saxutils
-        safe_text = xml.sax.saxutils.escape(req.text)
-        kw = dict(text=safe_text, voice=req.voice, rate=req.rate, pitch=req.pitch)
+        kw = dict(text=req.text, voice=req.voice, rate=req.rate, pitch=req.pitch)
         if PROXY: kw["proxy"] = PROXY
         
         ad = bytearray(); sm = None
